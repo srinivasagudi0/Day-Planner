@@ -2,7 +2,7 @@ import datetime
 
 import streamlit as st
 
-from app_db import add_task, delete_task, edit_task, get_tasks, init_db
+from app_db import add_task, delete_task, edit_task, get_tasks, init_db, get_completed_tasks
 
 st.set_page_config(page_title="DayMap", layout="centered")
 
@@ -45,7 +45,7 @@ def editable_time(task_time):
     except ValueError:
         return None
 
-
+##############APPPP#################################################################### 
 st.title("DayMap")
 st.caption("Plan the tasks already on your mind and keep today's schedule visible.")
 
@@ -55,7 +55,7 @@ if st.session_state.pop("task_updated", False):
 tasks = get_tasks()
 
 st.sidebar.header("DayMap")
-mode = st.sidebar.selectbox("Mode", ["Home", "Add Task"])
+mode = st.sidebar.selectbox("Mode", ["Home", "Add Task", "Completed Tasks"])
 
 st.sidebar.divider()
 if st.sidebar.button("Clear Tasks", disabled=not tasks, use_container_width=True):
@@ -138,3 +138,10 @@ if mode == "Add Task":
                 st.success(f"Task '{task_name}' was added for {task_time_text}.")
             else:
                 st.success(f"Task '{task_name}' was added.")
+
+if mode == "Completed Tasks":
+    st.header("Completed Tasks")
+    completed_tasks = get_completed_tasks()
+    for task_id, task_name, task_time in completed_tasks:
+        time_text = format_time(task_time)
+        st.markdown(f"- **{task_name}** at {time_text}")
