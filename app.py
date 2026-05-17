@@ -69,7 +69,10 @@ if mode == "Home":
             task_container = st.container(border=True)
             time_column, task_column = task_container.columns([1, 3])
             time_column.markdown(f"**{format_time(task_time)}**")
-            task_column.write(task_name)
+            if task_column.checkbox(task_name):
+                delete_task(task_id)
+                st.rerun()
+            
     else:
         st.info("No tasks yet. Use Add Task in the sidebar to start your schedule.")
 

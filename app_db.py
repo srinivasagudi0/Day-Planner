@@ -41,3 +41,15 @@ def delete_task(task_id):
     c.execute("DELETE FROM tasks WHERE id = ?", (task_id,))
     conn.commit()
     conn.close()
+
+def edit_task(id, name=None, time=None):
+    conn = sqlite3.connect(DB_PATH)
+    c = conn.cursor()
+    if name is not None and time is not None:
+        c.execute("UPDATE tasks SET name = ?, time = ? WHERE id = ?", (name, time, id))
+    elif name is not None:
+        c.execute("UPDATE tasks SET name = ? WHERE id = ?", (name, id))
+    elif time is not None:
+        c.execute("UPDATE tasks SET time = ? WHERE id = ?", (time, id))
+    conn.commit()
+    conn.close()
