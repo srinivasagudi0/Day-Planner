@@ -1,4 +1,4 @@
-## cleaned up the db code to be more error proof and added some context managers to make it easier to work with the db connection.
+## simple database helpers for saving, editing, and clearing tasks.
 import sqlite3
 
 DB_PATH = "daymap.db"
@@ -13,6 +13,8 @@ def init_db():
             time TEXT
         )
     ''')
+    conn.commit()
+    conn.close()
 
 
 def add_task(name, time=None):
@@ -33,7 +35,9 @@ def get_tasks():
             time,
             id
     """)
-    return c.fetchall()
+    tasks = c.fetchall()
+    conn.close()
+    return tasks
 
 def delete_task(task_id):
     conn = sqlite3.connect(DB_PATH)
@@ -42,14 +46,9 @@ def delete_task(task_id):
     conn.commit()
     conn.close()
 
-def edit_task(id, name=None, time=None):
+def edit_task(task_id, name, time=None):
     conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()
-    if name is not None and time is not None:
-        c.execute("UPDATE tasks SET name = ?, time = ? WHERE id = ?", (name, time, id))
-    elif name is not None:
-        c.execute("UPDATE tasks SET name = ? WHERE id = ?", (name, id))
-    elif time is not None:
-        c.execute("UPDATE tasks SET time = ? WHERE id = ?", (time, id))
+    c.execute("UPDATE tasks SET name = ?, time = ? WHERE id = ?", (name, time, task_id))
     conn.commit()
     conn.close()

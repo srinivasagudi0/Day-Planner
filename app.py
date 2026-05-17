@@ -2,7 +2,7 @@ import datetime
 
 import streamlit as st
 
-from app_db import add_task, delete_task, get_tasks, init_db
+from app_db import add_task, delete_task, edit_task, get_tasks, init_db
 
 st.set_page_config(page_title="DayMap", layout="centered")
 
@@ -36,8 +36,21 @@ def saved_time(task_time):
     return task_time.isoformat(timespec="minutes")
 
 
+def editable_time(task_time):
+    if not task_time:
+        return None
+
+    try:
+        return datetime.time.fromisoformat(task_time)
+    except ValueError:
+        return None
+
+
 st.title("DayMap")
 st.caption("Plan the tasks already on your mind and keep today's schedule visible.")
+
+if st.session_state.pop("task_updated", False):
+    st.success("Task updated.")
 
 tasks = get_tasks()
 
@@ -69,9 +82,32 @@ if mode == "Home":
             task_container = st.container(border=True)
             time_column, task_column = task_container.columns([1, 3])
             time_column.markdown(f"**{format_time(task_time)}**")
-            if task_column.checkbox(task_name):
+            if task_column.checkbox(task_name, key=f"done_task_{task_id}"):
                 delete_task(task_id)
                 st.rerun()
+
+            with task_container.expander("Edit"):
+                with st.form(f"edit_task_form_{task_id}"):
+                    edited_name = st.text_input(
+                        "Task Name",
+                        value=task_name,
+                        key=f"edit_task_name_{task_id}",
+                    )
+                    edited_time = st.time_input(
+                        "Task Time (optional)",
+                        value=editable_time(task_time),
+                        step=datetime.timedelta(minutes=15),
+                        key=f"edit_task_time_{task_id}",
+                    )
+                    saved = st.form_submit_button("Save", use_container_width=True)
+
+                if saved:
+                    if not edited_name.strip():
+                        st.warning("Please add a task name first.")
+                    else:
+                        edit_task(task_id, edited_name.strip(), saved_time(edited_time))
+                        st.session_state.task_updated = True
+                        st.rerun()
             
     else:
         st.info("No tasks yet. Use Add Task in the sidebar to start your schedule.")
