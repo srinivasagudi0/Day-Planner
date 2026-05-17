@@ -77,3 +77,25 @@ def get_completed_tasks():
     conn.close()
     return tasks
 
+def delete_completed_task(task_id):
+    conn = sqlite3.connect(DB_PATH)
+    c = conn.cursor()
+    c.execute("DELETE FROM completed_tasks WHERE id = ?", (task_id,))
+    conn.commit()
+    conn.close()
+
+def restore_completed_task(task_id):
+    conn = sqlite3.connect(DB_PATH)
+    c = conn.cursor()
+    c.execute("INSERT INTO tasks (name, time) SELECT name, time FROM completed_tasks WHERE id = ?", (task_id,))
+    c.execute("DELETE FROM completed_tasks WHERE id = ?", (task_id,))
+    conn.commit()
+    conn.close()
+
+def clear_completed_tasks():
+    conn = sqlite3.connect(DB_PATH)
+    c = conn.cursor()
+    c.execute("DELETE FROM completed_tasks")
+    conn.commit()
+    conn.close()
+

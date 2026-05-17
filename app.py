@@ -2,7 +2,18 @@ import datetime
 
 import streamlit as st
 
-from app_db import add_task, delete_task, edit_task, get_tasks, init_db, get_completed_tasks
+from app_db import (
+    add_task,
+    clear_completed_tasks,
+    delete_completed_task,
+    delete_task,
+    edit_task,
+    get_completed_tasks,
+    get_tasks,
+    init_db,
+    restore_completed_task,
+)
+from Planner import generate_basic_plan
 
 st.set_page_config(page_title="DayMap", layout="centered")
 
@@ -74,6 +85,27 @@ def status_badge(status):
         return ":blue[upcoming]"
     return ":orange[pending]"
 
+
+def add_minutes(start_time, minutes):
+    # datetime makes this less annoying
+    fake_day = datetime.datetime.combine(datetime.date.today(), start_time)
+    return (fake_day + datetime.timedelta(minutes=minutes)).time().replace(second=0, microsecond=0)
+
+
+def put_task_in_plan(plan, name, time_value):
+    if time_value:
+        plan.append((name, saved_time(time_value)))
+
+
+def add_list_tasks(plan, raw_text, first_time, gap_minutes):
+    if not raw_text:
+        return
+    pieces = [x.strip() for x in raw_text.replace("\n", ",").split(",")]
+    pieces = [x for x in pieces if x]
+    for index, thing in enumerate(pieces):
+        plan.append((thing, saved_time(add_minutes(first_time, gap_minutes * index))))
+
+
 ##############APPPP#################################################################### 
 st.title("DayMap")
 st.caption("Plan the tasks already on your mind and keep today's schedule visible.")
@@ -84,7 +116,7 @@ if st.session_state.pop("task_updated", False):
 tasks = get_tasks()
 
 st.sidebar.header("DayMap")
-mode = st.sidebar.selectbox("Mode", ["Home", "Add Task", "Completed Tasks"])
+mode = st.sidebar.selectbox("Mode", ["Home", "Add Task", "Completed Tasks", "Schedule", "Schedule Planner"])
 
 st.sidebar.divider()
 if st.sidebar.button("Clear Tasks", disabled=not tasks, use_container_width=True):
@@ -173,10 +205,139 @@ if mode == "Add Task":
 if mode == "Completed Tasks":
     st.header("Completed Tasks")
     completed_tasks = get_completed_tasks()
-    for task_id, task_name, task_time in completed_tasks:
-        time_text = format_time(task_time)
-        st.markdown(f"- **{task_name}** at {time_text}")
+    left, right = st.columns(2)
+    left.metric("Finished", len(completed_tasks))
+    if right.button("Clear completed", disabled=not completed_tasks, use_container_width=True):
+        clear_completed_tasks()
+        st.success("Completed tasks cleared.")
+        st.rerun()
 
-if mode == "AI Planner":
-    st.header("AI Planner")
-    st.info("This feature is coming soon! It will help you plan your day by suggesting optimal times for your tasks based on your schedule and preferences.")
+    if completed_tasks:
+        for task_id, task_name, task_time in completed_tasks:
+            task_container = st.container(border=True)
+            time_column, task_column, buttons_column = task_container.columns([1, 3, 2])
+            time_column.markdown(f"**{format_time(task_time)}**")
+            task_column.markdown(task_name)
+            restore_clicked = buttons_column.button("Restore", key=f"restore_done_{task_id}", use_container_width=True)
+            delete_clicked = buttons_column.button("Delete", key=f"delete_done_{task_id}", use_container_width=True)
+
+            if restore_clicked:
+                restore_completed_task(task_id)
+                st.success("Task moved back to schedule.")
+                st.rerun()
+
+            if delete_clicked:
+                delete_completed_task(task_id)
+                st.success("Completed task deleted.")
+                st.rerun()
+    else:
+        st.info("No completed tasks yet.")
+
+if mode == "Schedule":
+    st.header("Schedule")
+    st.caption("Same tasks as Home, just more like a planner list.")
+
+    if tasks:
+        for task_id, task_name, task_time in tasks:
+            status = task_status(task_time)
+            st.markdown(f"- **{format_time(task_time)}** - {task_name} - {status}")
+    else:
+        st.info("No tasks yet. Generate a plan or add a task.")
+
+if mode == "Schedule Planner":
+    st.header("Schedule Planner")
+    #time and sleep
+    left, middle, right = st.columns(3)
+    with left:
+        wake_up_time = st.time_input("Wake Up Time", value=datetime.time(7, 0), step=datetime.timedelta(minutes=15))
+    with middle:
+        sleep_time_start = st.time_input("Sleep Time Start", value=datetime.time(22, 0), step=datetime.timedelta(minutes=15))
+    with right:
+        nap_time = st.time_input("Nap Time (optional)", value=None, step=datetime.timedelta(minutes=15))
+    
+    # work and study
+    left, middle, right = st.columns(3)
+    with left:
+        school_start = st.time_input("School/Work Start Time", value=datetime.time(9, 0), step=datetime.timedelta(minutes=15))
+    with middle:
+        school_end = st.time_input("School/Work End Time", value=datetime.time(17, 0), step=datetime.timedelta(minutes=15))
+        work_priority = st.selectbox("Work/Study Priority", ["Low", "Medium", "High"])
+    with right:
+        commute_time = st.slider("Commute Time (minutes)", min_value=0, max_value=120, value=30, step=5)
+        breaks = st.multiselect("Breaks during work/school (optional)", ["Morning Break", "Lunch Break", "Afternoon Break"])
+
+    # helth and fitness
+    left, middle, right = st.columns(3)
+    with left:
+        exrsice_time = st.time_input("Exercise Time [preferred]", value=None, step=datetime.timedelta(minutes=15))
+    with middle:
+        exercise_duration = st.slider("Exercise Duration (minutes)", min_value=0, max_value=180, value=30, step=5)
+    with right:
+        exercise_type = st.selectbox("Exercise Type", ["Cardio", "Strength", "Yoga", "Sports", "Walking", "Other"])
+    
+    # meals
+    left, middle, right = st.columns(3)
+    with left:
+        breakfast_time = st.time_input("Breakfast Time", value=datetime.time(8, 0), step=datetime.timedelta(minutes=15))
+    with middle:
+        lunch_time = st.time_input("Lunch Time", value=datetime.time(12, 0), step=datetime.timedelta(minutes=15))
+    with right:
+        dinner_time = st.time_input("Dinner Time", value=datetime.time(19, 0), step=datetime.timedelta(minutes=15))
+    
+    meal_prep_time = st.slider("Meal Prep Time (minutes)", min_value=0, max_value=120, value=30, step=5)
+
+    # personal tasks
+    left , middle, right = st.columns(3)
+    with left:
+        personal_tasks = st.text_area("Personal Tasks (optional)", placeholder="List any personal tasks you want to include, separated by commas)")
+    # mindfulness and social
+    with middle:
+        break_time = st.time_input("Mindfulness/Break Time (optional)", value=None, step=datetime.timedelta(minutes=15))
+    with right:
+        social_time = st.time_input("Social Time (optional)", value=None, step=datetime.timedelta(minutes=15))
+    
+    # focus and flexibility
+    left, middle, right = st.columns(3)
+    with left:
+        focus_duration = st.slider("Focus Block Duration (minutes)", min_value=15, max_value=120, value=45, step=5)
+    with middle:
+        buffer_time = st.slider("Buffer Time Between Tasks (minutes)", min_value=0, max_value=30, value=10, step=5)
+    with right:
+        flexibility = st.select_slider("Schedule Flexibility", ["Strict", "Moderate", "Flexible"])
+    
+    # learning and energy
+    learning_goals = st.text_area("Learning Goals (optional)", placeholder="List any learning goals you have for the day, separated by commas)")
+    energy_levels = st.selectbox("Energy Levels", ["Morning Person", "Evening Person", "Neutral", "Night Owl"])
+    
+    # generate button
+    st.divider()
+    if st.button("Generate My Schedule", use_container_width=True, type="primary"):
+        generated_plan = generate_basic_plan(
+            wake_up_time,
+            sleep_time_start,
+            nap_time,
+            school_start,
+            school_end,
+            commute_time,
+            breaks,
+            exrsice_time,
+            exercise_duration,
+            exercise_type,
+            breakfast_time,
+            lunch_time,
+            dinner_time,
+            meal_prep_time,
+            personal_tasks,
+            break_time,
+            social_time,
+            focus_duration,
+            buffer_time,
+            learning_goals,
+            energy_levels
+        )
+
+        st.subheader("Your Generated Schedule")
+        with st.spinner("Generating your schedule..."):
+            st.markdown(generated_plan)
+
+    
