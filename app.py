@@ -1,15 +1,56 @@
-import streamlit as st
 import datetime
-from app_db import init_db, add_task, get_tasks
+
+import streamlit as st
+
+from app_db import add_task, delete_task, get_tasks, init_db
+
+st.set_page_config(page_title="DayMap", layout="centered")
 
 init_db()
-# i have a basic idea of what i want to do with this app, but i need to figure out how to make this really really helpful and get. apporved.
+
+## deal with time formatting to make it look nice in the Ui and be stored safe in the db.
+def format_date(day):
+    return f"{day:%A, %B} {day.day}, {day:%Y}"
+
+
+def format_time(task_time):
+    
+    if not task_time:
+        return "Anytime"
+
+    try:
+        parsed_time = datetime.time.fromisoformat(task_time)
+    
+    except ValueError:
+    
+        return task_time
+
+    return parsed_time.strftime("%I:%M %p").lstrip("0")
+
+
+def saved_time(task_time):
+    
+    if task_time is None:
+        return None
+
+    return task_time.isoformat(timespec="minutes")
+
 
 st.title("DayMap")
-st.caption("A tool to help you plan your day and stay organized.")
+st.caption("Plan the tasks already on your mind and keep today's schedule visible.")
 
-st.sidebar.header("DayMap Modes")
-mode = st.sidebar.selectbox("Select Mode", ["Home", "Add Task"])
+tasks = get_tasks()
+
+st.sidebar.header("DayMap")
+mode = st.sidebar.selectbox("Mode", ["Home", "Add Task"])
+
+st.sidebar.divider()
+if st.sidebar.button("Clear Tasks", disabled=not tasks, use_container_width=True):
+    for task in tasks:
+        delete_task(task[0])
+
+    st.sidebar.success("All tasks cleared.")
+    st.rerun()
 
 if mode == "Home":
     today = datetime.date.today()
@@ -17,30 +58,44 @@ if mode == "Home":
     left, right = st.columns(2)
 
     with left:
-        st.header("Today's Date")
-        st.subheader(today)
+        st.metric("Today", format_date(today))
+   
     with right:
-        st.header("Your Schedule")
-        tasks = get_tasks()
-        if tasks:
-            for task in tasks:
-                st.markdown(f"- {task[1]} at {task[2]}")
-        else:
-            st.write("You can add your schedule here.")
+        st.metric("Tasks", len(tasks))
 
-    st.header("\nWelcome to DayMap!")
-    st.write("Make your schedule for today by using the sidebar to add tasks and events. You can also use the calendar to select a different date and plan for that day.")
+    st.header("Your Schedule")
+    if tasks:
+        for task_id, task_name, task_time in tasks:
+            task_container = st.container(border=True)
+            time_column, task_column = task_container.columns([1, 3])
+            time_column.markdown(f"**{format_time(task_time)}**")
+            task_column.write(task_name)
+    else:
+        st.info("No tasks yet. Use Add Task in the sidebar to start your schedule.")
+
+    st.write("Use the sidebar to add tasks. Your schedule stays saved between app sessions.")
 
 if mode == "Add Task":
     st.header("Add a Task")
-    task_name = st.text_input("Task Name")
-    task_time = st.time_input("Task Time # optional")
-    if st.button("Add Task"):
-        if task_name and task_time:
-            add_task(task_name, str(task_time))
-            st.success(f"Task '{task_name}' was added at {str(task_time)}.")
-        elif task_name:
-            add_task(task_name)
-            st.success(f"Task '{task_name}' was added.")
+    
+    with st.form("add_task_form", clear_on_submit=True):
+        
+        task_name = st.text_input("Task Name", placeholder="What do you need to do?")
+        task_time = st.time_input(
+            "Task Time (optional)",
+            value=None,
+            step=datetime.timedelta(minutes=15),
+        )
+        submitted = st.form_submit_button("Add Task", use_container_width=True)
+
+    if submitted:
+
+        if not task_name.strip():
+            st.warning("Please add a task name first.")
         else:
-            st.warning("Please add task name atleast.")
+            add_task(task_name, saved_time(task_time))
+            if task_time:
+                task_time_text = format_time(saved_time(task_time))
+                st.success(f"Task '{task_name}' was added for {task_time_text}.")
+            else:
+                st.success(f"Task '{task_name}' was added.")
