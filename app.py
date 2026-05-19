@@ -165,6 +165,7 @@ def recurrence_text(recurrence):
 
 
 def quick_add_task(raw_text):
+    # used ai to polish this and for regex functions so hopefully you understand.
     text = raw_text.strip()
     if not text:
         return None
@@ -644,6 +645,7 @@ if mode == "Schedule Planner":
     st.divider()
     if st.button("Generate schedule", use_container_width=True, type="primary"):
         with st.spinner("Building your schedule..."):
+            # i need this many to make a perfect plan.
             plan_rows = build_local_plan(
                 wake_up_time,
                 sleep_time_start,
