@@ -1,3 +1,4 @@
+# refactor using ai to make it clean and finish the project fast, so thanks
 import datetime
 import re
 from collections import defaultdict
@@ -719,3 +720,5 @@ if mode == "Schedule Planner":
             del st.session_state.generated_plan
             del st.session_state.generated_tasks
             st.rerun()
+
+ 
