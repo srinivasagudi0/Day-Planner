@@ -1,4 +1,3 @@
-# refactor using ai to make it clean and finish the project fast, so thanks 
 import datetime
 import re
 from collections import defaultdict
