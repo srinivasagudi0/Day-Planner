@@ -1,4 +1,4 @@
-# refactor using ai to make it clean and finish the project fast, so thanks
+# refactor using ai to make it clean and finish the project fast, so thanks 
 import datetime
 import re
 from collections import defaultdict
@@ -23,10 +23,14 @@ from app_db import (
 )
 from Planner import build_local_plan, generate_basic_plan
 
+def load_css():
+    with open("assets/style.css", "r") as f:
+        st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
+
 
 st.set_page_config(page_title="DayMap", layout="centered")
 init_db()
-
+load_css()
 
 BADGE_STYLES = {
     "red": "background:#fee2e2;color:#991b1b;border:1px solid #fecaca;",
