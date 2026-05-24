@@ -27,7 +27,6 @@ def load_css():
     with open("assets/style.css", "r") as f:
         st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
 
-
 st.set_page_config(page_title="DayMap", layout="centered")
 init_db()
 load_css()
