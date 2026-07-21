@@ -1,24 +1,16 @@
-# DayPlanner
+# DayMap
 
-A planning tool to organize your daily tasks, schedule, and goals effeciently. 
+DayMap is a simple daily planner I made using Python and Streamlit. It helps me organize my task and plan my day effectively.
 
 ## Features
 
-- Task management with priority levels
-- Daily schedule planning
-- Goal tracking 
-- Notes and reminders
+- Add, edit, complete and delete tasks
+- Set dates, times, and priorities
+- View upcoming and completed tasks
+- Create a daily schedule
 
-## Usage
+## Why I made this
 
-Create tasks, set priorities, and organize your schedule for the day. 
+I made DayMap to keep me on schedule as I think I have a lot of things to do.
 
-## Installation
-
-For detailed installation instructions, please refer to the [Installation Guide](INSTALLATION.md).
-
-## Contributing
-I am open to contributions! If you have any ideas or improvements, feel free to submit a pull request or open an issue. I would really appreciate it if you improve the CSS of the app.
-
-## License
-This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
+Thanks, try it out [here]()
