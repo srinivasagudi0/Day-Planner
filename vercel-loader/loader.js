@@ -1,6 +1,8 @@
 const statusMessage = document.querySelector("#status");
 const startedAt = Date.now();
 const pollDelay = 3000;
+const readyChecksNeeded = 3;
+let readyChecks = 0;
 
 function updateWaitingMessage() {
   const secondsWaiting = Math.round((Date.now() - startedAt) / 1000);
@@ -14,7 +16,7 @@ function updateWaitingMessage() {
 
 async function checkHealth() {
   try {
-    const response = await fetch("/api/health", { cache: "no-store" });
+    const response = await fetch(`/api/health?_=${Date.now()}`, { cache: "no-store" });
     const result = await response.json();
 
     if (response.status === 500) {
@@ -23,13 +25,24 @@ async function checkHealth() {
     }
 
     if (result.ready && result.appUrl) {
-      statusMessage.textContent = "DayMap is ready. Opening it now.";
-      window.location.replace(result.appUrl);
-      return;
-    }
+      readyChecks += 1;
 
-    updateWaitingMessage();
+      if (readyChecks >= readyChecksNeeded) {
+        statusMessage.textContent = "DayMap is ready. Opening it now.";
+
+        const destination = new URL(result.appUrl);
+        destination.searchParams.set("_daymap_start", Date.now().toString());
+        window.setTimeout(() => window.location.replace(destination.toString()), 750);
+        return;
+      }
+
+      statusMessage.textContent = `DayMap is responding. Finishing startup (${readyChecks}/${readyChecksNeeded}).`;
+    } else {
+      readyChecks = 0;
+      updateWaitingMessage();
+    }
   } catch {
+    readyChecks = 0;
     statusMessage.textContent = "DayMap is still starting. Retrying shortly.";
   }
 

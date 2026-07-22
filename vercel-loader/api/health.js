@@ -3,6 +3,8 @@ const timeoutMs = 8000;
 
 function sendJson(response, status, body) {
   response.setHeader("Cache-Control", "no-store, max-age=0");
+  response.setHeader("CDN-Cache-Control", "no-store");
+  response.setHeader("Vercel-CDN-Cache-Control", "no-store");
   return response.status(status).json(body);
 }
 
@@ -39,13 +41,33 @@ module.exports = async function health(request, response) {
   const timeout = setTimeout(() => controller.abort(), timeoutMs);
 
   try {
-    const renderResponse = await fetch(`${appUrl}${healthPath}`, {
-      cache: "no-store",
-      headers: { Accept: "text/plain" },
-      signal: controller.signal,
-    });
+    const cacheBuster = Date.now().toString();
+    const rootUrl = new URL(appUrl);
+    const healthUrl = new URL(healthPath, appUrl);
+    rootUrl.searchParams.set("_daymap_wake", cacheBuster);
+    healthUrl.searchParams.set("_daymap_wake", cacheBuster);
 
-    if (!renderResponse.ok) {
+    const [rootResponse, healthResponse] = await Promise.all([
+      fetch(rootUrl, {
+        cache: "no-store",
+        headers: { Accept: "text/html" },
+        signal: controller.signal,
+      }),
+      fetch(healthUrl, {
+        cache: "no-store",
+        headers: { Accept: "text/plain" },
+        signal: controller.signal,
+      }),
+    ]);
+
+    if (!rootResponse.ok || !healthResponse.ok) {
+      return sendJson(response, 503, { ready: false });
+    }
+
+    const contentType = rootResponse.headers.get("content-type") || "";
+    const page = await rootResponse.text();
+
+    if (!contentType.includes("text/html") || !page.trim()) {
       return sendJson(response, 503, { ready: false });
     }
 
