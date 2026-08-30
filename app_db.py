@@ -1,8 +1,9 @@
 from pathlib import Path
 import sqlite3
+import sys
 
 
-DB_PATH = Path(__file__).with_name("daymap.db")
+DB_PATH = Path("/mnt/daymap.db") if sys.platform == "emscripten" else Path(__file__).with_name("daymap.db")
 
 PRIORITIES = ("High", "Medium", "Low")
 RECURRENCES = ("None", "Daily", "Weekly")
