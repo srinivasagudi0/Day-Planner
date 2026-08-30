@@ -1,0 +1,7 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": null,
+  "installCommand": "",
+  "buildCommand": "mkdir -p public/assets && cp stlite/index.html public/index.html && cp app.py app_db.py Planner.py public/ && cp assets/style.css public/assets/style.css",
+  "outputDirectory": "public"
+}
